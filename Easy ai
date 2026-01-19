@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Generate Your AI Photo</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+/* ====== REALISTIC BACKGROUND + GLASSMORPHISM ====== */
+body { 
+    font-family: Arial; 
+    background: url('https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1200&q=80') 
+        no-repeat center/cover;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.35);
+    backdrop-filter: blur(10px);
+    z-index: -1;
+}
+
+.container {
+    background: rgba(255,255,255,0.78);
+    padding: 28px;
+    border-radius: 18px;
+    max-width: 760px;
+    width: 90%;
+    box-shadow: 0 10px 35px rgba(0,0,0,0.18);
+    backdrop-filter: blur(12px);
+}
+
+/* ====== TEXTAREA AUTO-EXPAND ====== */
+textarea#prompt {
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+    background: rgba(255,255,255,0.95);
+    resize: none;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* select dan button dalam satu baris */
+.select-and-button {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+select#style {
+    flex: 0 0 220px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    background: rgba(255,255,255,0.9);
+}
+
+button#generateBtn {
+    flex: 1 1 auto;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: #28a745;
+    color: white;
+    font-size: 17px;
+    cursor: pointer;
+    transition: 0.15s;
+}
+
+button#generateBtn:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+#result img {
+    width: 100%;
+    border-radius: 12px;
+    margin-top: 20px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
+.loader {
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #28a745;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin { 
+    0% { transform: rotate(0deg); } 
+    100% { transform: rotate(360deg); } 
+}
+
+#loadingText {
+    text-align: center;
+    font-weight: bold;
+    margin-top: 10px;
+    color: #28a745;
+}
+
+#downloadBtn {
+    display: none;
+    margin-top: 15px;
+    background: #007bff;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    text-decoration: none;
+}
+
+#downloadBtn:hover {
+    background: #0062cc;
+}
+
+/* Responsive tweaks */
+@media (max-width: 480px) {
+    .container { padding: 18px; }
+    select#style { flex: 0 0 140px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>Generate Your AI Photo</h2>
+
+    <!-- Auto-expand textarea -->
+    <textarea id="prompt" placeholder="Describe your photo..." rows="2"></textarea>
+
+    <!-- select & button -->
+    <div class="select-and-button">
+        <select id="style">
+            <option value="">Select style (optional)</option>
+            <option value="realistic">Realistic</option>
+            <option value="cartoon">Cartoon</option>
+            <option value="painting">Painting</option>
+        </select>
+
+        <button id="generateBtn" onclick="generate()">Generate</button>
+    </div>
+
+    <div id="result"></div>
+    <a id="downloadBtn" download="AI_Photo.png">Download Photo</a>
+</div>
+
+<script>
+
+/* ===============================
+   ANTI-NUDITY / ANTI-PORN FILTER
+================================= */
+const bannedWords = [
+ "nude","naked","bogel","sex","porn","lucah",
+ "boobs","breast","pussy","vagina","penis","fuck",
+ "cock","cum","blowjob","nipple","fetish","69"
+];
+
+function containsBannedWords(text) {
+    return bannedWords.some(word => 
+        text.toLowerCase().includes(word)
+    );
+}
+
+/* ===============================
+   AUTO-EXPAND TEXTAREA
+================================= */
+const promptBox = document.getElementById("prompt");
+promptBox.addEventListener("input", function () {
+    this.style.height = "auto";
+    this.style.height = (this.scrollHeight) + "px";
+});
+
+/* ===============================
+   GENERATE FUNCTION
+================================= */
+function generate() {
+    let prompt = document.getElementById("prompt").value.trim();
+    let style = document.getElementById("style").value;
+    let result = document.getElementById("result");
+    let downloadBtn = document.getElementById("downloadBtn");
+
+    // ⛔ BLOCK PROMPT LUCAH
+    if (containsBannedWords(prompt)) {
+        alert("⚠️ Prompt ini mengandungi perkataan tidak dibenarkan.\nSila gunakan prompt yang sopan.");
+        return;
+    }
+
+    if (prompt === "") {
+        alert("Please describe your photo before generating.");
+        return;
+    }
+
+    result.innerHTML = '<div class="loader"></div><div id="loadingText">Generating your AI photo...</div>';
+    downloadBtn.style.display = "none";
+
+    let finalPrompt = prompt + (style ? `, ${style} style` : "");
+    let url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(finalPrompt) + "?rand=" + Date.now();
+
+    let img = new Image();
+    img.src = url;
+    img.alt = "AI Photo";
+
+    img.onload = function() {
+        result.innerHTML = '';
+        result.appendChild(img);
+        downloadBtn.href = url;
+        downloadBtn.style.display = "block";
+    }
+
+    img.onerror = function() {
+        result.innerHTML = '<div style="text-align:center;color:red;">Failed to generate photo. Try again.</div><img src="https://via.placeholder.com/512x512?text=No+Image" alt="Placeholder">';
+        downloadBtn.style.display = "none";
+    }
+}
+</script>
+
+</body>
+</html>
